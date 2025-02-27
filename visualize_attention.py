@@ -1,4 +1,5 @@
 import torch
+from setuptools.sandbox import save_path
 from torchvision import transforms
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -45,12 +46,15 @@ def visualize_attention(image_path, coords, attn_weights, patch_size):
 
     plt.title("Attention Weights Overlay")
     plt.axis('off')
+    save_path = "attention_overlay.png"
+    plt.savefig(save_path, bbox_inches='tight', dpi=300)
+    print(f"Plot saved to {save_path}")
     plt.show()
 
 
 def main():
     # Set parameters
-    image_dir = "synthetic_images_marker"  # Directory with synthetic images with markers
+    image_dir = "synthetic_images_random"  # Directory with synthetic images with markers
     label_file = f"{image_dir}/labels.csv"
     patch_size = 224
 
