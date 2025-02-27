@@ -2,14 +2,16 @@ import os
 import numpy as np
 from PIL import Image, ImageDraw
 import csv
+import random
 
 
-def generate_synthetic_data_with_random_markers(num_images=10, image_size=(4096, 4096),
-                                        output_dir="synthetic_images_marker",
-                                        csv_filename="labels.csv",
-                                        marker_min_size=50,
-                                        marker_max_size=150,
-                                        max_markers=5):
+def generate_synthetic_data_with_random_markers(num_images=10,
+                                                image_size=(4096, 4096),
+                                                output_dir="synthetic_images_random",
+                                                csv_filename="labels.csv",
+                                                marker_min_size=50,
+                                                marker_max_size=150,
+                                                max_markers=5):
     """
     Generate synthetic high-resolution images. For images with label==1,
     randomly generate multiple markers at random positions.
@@ -56,6 +58,7 @@ def generate_synthetic_data_with_random_markers(num_images=10, image_size=(4096,
             csvwriter.writerow([filename, label])
 
     print(f"Synthetic data generated in '{output_dir}' with CSV file '{csv_path}'.")
+
 
 if __name__ == "__main__":
     generate_synthetic_data_with_random_markers(num_images=10, image_size=(4096, 4096))
