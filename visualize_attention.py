@@ -28,6 +28,7 @@ def visualize_attention(image_path, coords, attn_weights, patch_size):
     if torch.is_tensor(attn_weights):
         attn_weights = attn_weights.cpu().detach().numpy()
     attn_weights = attn_weights.squeeze()  # (num_patches,)
+    print("Attention weights:", attn_weights)
 
     # Overlay each patch with a rectangle whose edge transparency reflects the attention weight.
     for (x_norm, y_norm), weight in zip(coords, attn_weights):
