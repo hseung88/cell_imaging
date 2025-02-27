@@ -36,7 +36,7 @@ We evaluated whether incorporating positional encoding into patch-level features
 ## References
 [1] Ilse, M., Tomczak, J. M., & Welling, M. (2018). *Attention-based Deep Multiple Instance Learning*. International Conference on Machine Learning. 2018.
 
-[2] Campanella, G., Hanna, M. G., Geneslaw, L., Miraflor, A., Silva, V. W. K., Busam, K. J., ... & Fuchs, T. J. (2019). *Clinical-grade Computational Pathology Using Weakly Supervised Deep Learning on Whole Slide Images*. Nature Medicine. 2019.
+[2] Campanella, G., Hanna, M. G., Geneslaw, L., Miraflor, A., Silva, V. W. K., Busam, K. J., Brogi, E, Reuter, V. E., Klimstra, D. S., & Fuchs, T. J. (2019). *Clinical-grade Computational Pathology Using Weakly Supervised Deep Learning on Whole Slide Images*. Nature Medicine. 2019.
 
 
 ## Getting Started
