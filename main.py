@@ -9,7 +9,7 @@ from mil_model import MILModel, CellImageDataset
 
 def train_model(model, dataloader, num_epochs, lr, device, checkpoint_dir, checkpoint_interval):
     model = model.to(device)
-    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9)
+    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.05)
     criterion = torch.nn.BCELoss()
     start_epoch = 0
 
