@@ -67,7 +67,7 @@ def main():
     # Load the dataset and pick one sample (bag) for visualization.
     dataset = CellImageDataset(image_dir=image_dir, label_file=label_file,
                                patch_size=patch_size, transform=transform)
-    patches, coords, label = dataset[15]  # Load the first image (bag)
+    patches, coords, label = dataset[8]  # Load the first image (bag)
     print(f"Image label: {label.item()}")
 
     # Initialize the MIL model.
