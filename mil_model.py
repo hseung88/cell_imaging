@@ -1,6 +1,7 @@
 import os
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torchvision import transforms
 from torch.utils.data import Dataset
 from custom_resnet import ResNetPatchCNN
@@ -66,10 +67,109 @@ class CellImageDataset(Dataset):
         return patches, coords, label
 
 
+# --- Positional Encoding Module ---
+class PositionalEncoding(nn.Module):
+    """
+    A simple MLP-based positional encoding module.
+    Maps 2D normalized coordinates to a higher-dimensional embedding.
+    """
+
+    def __init__(self, pos_dim):
+        super(PositionalEncoding, self).__init__()
+        self.mlp = nn.Sequential(
+            nn.Linear(2, pos_dim),
+            nn.ReLU(),
+            nn.Linear(pos_dim, pos_dim)
+        )
+
+    def forward(self, coords):
+        # coords: (num_patches, 2)
+        # Returns: (num_patches, pos_dim)
+        return self.mlp(coords)
+
+
+# --- BasicBlock and ResNetPatchCNN remain unchanged ---
+class BasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, in_channels, out_channels, stride=1):
+        super(BasicBlock, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3,
+                               stride=stride, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3,
+                               stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_channels != out_channels:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels,
+                          kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(out_channels)
+            )
+
+    def forward(self, x):
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        shortcut = self.shortcut(x)
+        out += shortcut
+        return F.relu(out)
+
+
+class ResNetPatchCNN(nn.Module):
+    """
+    A ResNet-style CNN for patch-level feature extraction.
+    """
+
+    def __init__(self, block=BasicBlock, num_blocks=[2, 2, 2], num_classes=128):
+        super(ResNetPatchCNN, self).__init__()
+        self.in_channels = 64
+
+        # Initial convolutional layer
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
+                               bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+
+        # Residual layers
+        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
+        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
+        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
+
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(256 * block.expansion, num_classes)
+
+    def _make_layer(self, block, out_channels, blocks, stride):
+        layers = []
+        layers.append(block(self.in_channels, out_channels, stride))
+        self.in_channels = out_channels * block.expansion
+        for _ in range(1, blocks):
+            layers.append(block(self.in_channels, out_channels))
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+
+        x = self.avgpool(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc(x)
+        return x
+
+
+# --- AttentionMIL Module ---
 class AttentionMIL(nn.Module):
     """
     Attention module for MIL aggregation.
-    Computes an attention weight for each patch feature.
+    Computes an attention score for each patch feature.
     """
 
     def __init__(self, feature_dim, hidden_dim=64):
@@ -83,25 +183,37 @@ class AttentionMIL(nn.Module):
     def forward(self, h):
         # h: (num_instances, feature_dim)
         a = self.attention_fc(h)  # (num_instances, 1)
-        a = torch.softmax(a, dim=0)  # Softmax over all instances in the bag
+        a = torch.softmax(a, dim=0)  # Softmax over instances
         M = torch.sum(a * h, dim=0)  # Aggregated feature: (feature_dim,)
         return M, a
 
 
+# --- MIL Model with Advanced Positional Encoding ---
 class MILModel(nn.Module):
     """
-    Overall MIL model.
-    Processes patches through ResNetPatchCNN in mini-batches, concatenates spatial coordinates,
-    aggregates features using an attention module, and classifies the image.
+    MIL model that extracts patch-level features using a ResNet-based CNN,
+    integrates spatial information via a learned positional encoding,
+    aggregates patch features with an attention module, and performs image-level classification.
 
-    The bag_batch_size parameter controls mini-batching within a bag (i.e., within a single image).
+    Parameters:
+      - patch_feature_dim: Dimension of patch features from ResNetPatchCNN.
+      - include_coords: Boolean flag to include spatial information.
+      - pos_dim: Dimension of the positional encoding.
+      - bag_batch_size: Mini-batch size for processing patches within a bag.
     """
-    def __init__(self, patch_feature_dim=128, include_coords=True, coord_dim=2, bag_batch_size=128):
+
+    def __init__(self, patch_feature_dim=128, include_coords=True, pos_dim=32, bag_batch_size=128):
         super(MILModel, self).__init__()
         self.include_coords = include_coords
         self.bag_batch_size = bag_batch_size
         self.patch_cnn = ResNetPatchCNN(num_classes=patch_feature_dim)
-        agg_input_dim = patch_feature_dim + (coord_dim if include_coords else 0)
+
+        if include_coords:
+            self.positional_encoder = PositionalEncoding(pos_dim)
+            agg_input_dim = patch_feature_dim + pos_dim
+        else:
+            agg_input_dim = patch_feature_dim
+
         self.attention = AttentionMIL(feature_dim=agg_input_dim, hidden_dim=64)
         self.classifier = nn.Sequential(
             nn.Linear(agg_input_dim, 64),
@@ -113,20 +225,23 @@ class MILModel(nn.Module):
     def forward(self, patches, coords):
         num_patches = patches.size(0)
         patch_features = []
+        # Process patches in mini-batches to manage memory.
         for i in range(0, num_patches, self.bag_batch_size):
             batch_patches = patches[i:i + self.bag_batch_size]
             features_batch = self.patch_cnn(batch_patches)
             patch_features.append(features_batch)
-        patch_features = torch.cat(patch_features, dim=0)
+        patch_features = torch.cat(patch_features, dim=0)  # (num_patches, patch_feature_dim)
 
         if self.include_coords:
-            x = torch.cat([patch_features, coords], dim=1)
+            # Use the advanced positional encoder instead of raw coordinates.
+            pos_encoding = self.positional_encoder(coords)  # (num_patches, pos_dim)
+            x = torch.cat([patch_features, pos_encoding], dim=1)
         else:
             x = patch_features
 
-        # MIL aggregation via attention.
+        # Aggregate patch features using the attention module.
         M, attn_weights = self.attention(x)
-        # Add a batch dimension so that M has shape (1, agg_input_dim)
-        M = M.unsqueeze(0)
+        M = M.unsqueeze(0)  # Add batch dimension: (1, agg_input_dim)
         y_pred = self.classifier(M)
         return y_pred, attn_weights
+
