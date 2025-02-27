@@ -91,40 +91,42 @@ class AttentionMIL(nn.Module):
 class MILModel(nn.Module):
     """
     Overall MIL model.
-    Processes patches through PatchCNN in mini-batches, optionally concatenates spatial coordinates,
+    Processes patches through ResNetPatchCNN in mini-batches, concatenates spatial coordinates,
     aggregates features using an attention module, and classifies the image.
 
     The bag_batch_size parameter controls mini-batching within a bag (i.e., within a single image).
     """
+        def __init__(self, patch_feature_dim=128, include_coords=True, coord_dim=2, bag_batch_size=128):
+            super(MILModel, self).__init__()
+            self.include_coords = include_coords
+            self.bag_batch_size = bag_batch_size
+            self.patch_cnn = ResNetPatchCNN(num_classes=patch_feature_dim)
+            agg_input_dim = patch_feature_dim + (coord_dim if include_coords else 0)
+            self.attention = AttentionMIL(feature_dim=agg_input_dim, hidden_dim=64)
+            self.classifier = nn.Sequential(
+                nn.Linear(agg_input_dim, 64),
+                nn.ReLU(),
+                nn.Linear(64, 1),
+                nn.Sigmoid()
+            )
 
-    def __init__(self, patch_feature_dim=128, include_coords=True, coord_dim=2, bag_batch_size=128):
-        super(MILModel, self).__init__()
-        self.include_coords = include_coords
-        self.bag_batch_size = bag_batch_size
-        self.patch_cnn = ResNetPatchCNN(num_classes=patch_feature_dim)
-        agg_input_dim = patch_feature_dim + (coord_dim if include_coords else 0)
-        self.attention = AttentionMIL(feature_dim=agg_input_dim, hidden_dim=64)
-        self.classifier = nn.Sequential(
-            nn.Linear(agg_input_dim, 64),
-            nn.ReLU(),
-            nn.Linear(64, 1),
-            nn.Sigmoid()
-        )
+        def forward(self, patches, coords):
+            num_patches = patches.size(0)
+            patch_features = []
+            for i in range(0, num_patches, self.bag_batch_size):
+                batch_patches = patches[i:i + self.bag_batch_size]
+                features_batch = self.patch_cnn(batch_patches)
+                patch_features.append(features_batch)
+            patch_features = torch.cat(patch_features, dim=0)
 
-    def forward(self, patches, coords):
-        num_patches = patches.size(0)
-        patch_features = []
-        for i in range(0, num_patches, self.bag_batch_size):
-            batch_patches = patches[i:i + self.bag_batch_size]
-            features_batch = self.patch_cnn(batch_patches)
-            patch_features.append(features_batch)
-        patch_features = torch.cat(patch_features, dim=0)
+            if self.include_coords:
+                x = torch.cat([patch_features, coords], dim=1)
+            else:
+                x = patch_features
 
-        if self.include_coords:
-            x = torch.cat([patch_features, coords], dim=1)
-        else:
-            x = patch_features
-
-        M, attn_weights = self.attention(x)
-        y_pred = self.classifier(M)
-        return y_pred, attn_weights
+            # MIL aggregation via attention.
+            M, attn_weights = self.attention(x)
+            # Add a batch dimension so that M has shape (1, agg_input_dim)
+            M = M.unsqueeze(0)
+            y_pred = self.classifier(M)
+            return y_pred, attn_weights
