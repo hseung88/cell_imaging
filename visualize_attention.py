@@ -1,5 +1,4 @@
 import torch
-from setuptools.sandbox import save_path
 from torchvision import transforms
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
