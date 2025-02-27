@@ -9,9 +9,9 @@ def generate_synthetic_data(num_images=10,
                                         image_size=(4096, 4096),
                                         output_dir="synthetic_images",
                                         csv_filename="labels.csv",
-                                        marker_min_size=50,
-                                        marker_max_size=150,
-                                        max_markers=5,
+                                        marker_min_size=30,
+                                        marker_max_size=50,
+                                        max_markers=10,
                                         blur_radius=15):
     """
     Generate synthetic high-resolution images with a more realistic tissue-like background and
@@ -71,7 +71,7 @@ def generate_synthetic_data(num_images=10,
                     color = random.choice(["red", "blue", "green", "yellow"])
 
                     # Randomly set a bold outline width.
-                    width_outline = random.randint(3, 8)
+                    width_outline = random.randint(50, 100)
 
                     if shape == "circle":
                         # For circle, define bounding box with equal width and height.
