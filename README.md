@@ -1,4 +1,4 @@
-# High-Resolution Cell Imaging Analysis Using Multiple-Instance Learning
+# High-Resolution Cell Imaging: Weakly-Supervised Multiple-Instance Learning
 
 ## Overview
 This project implements a multiple-instance learning (MIL) pipeline for high-resolution cell imaging. Given that whole-slide images are typically megapixel or gigapixel in size, we extract fixed-size patches and process them with a custom MIL model. The model uses a customized ResNet for patch-level feature extraction, positional encoding to capture spatial information, and an attention aggregator to produce an image-level prediction.
