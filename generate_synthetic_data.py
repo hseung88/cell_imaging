@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw
 import csv
 
 
-def generate_synthetic_data_with_random_marker(num_images=10, image_size=(4096, 4096),
+def generate_synthetic_data_with_random_markers(num_images=10, image_size=(4096, 4096),
                                         output_dir="synthetic_images_marker",
                                         csv_filename="labels.csv",
                                         marker_min_size=50,
