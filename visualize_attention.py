@@ -38,7 +38,7 @@ def visualize_attention(image_path, coords, attn_weights, patch_size):
         rect = mpatches.Rectangle(
             (x, y), patch_size, patch_size,
             linewidth=3,
-            edgecolor=(0, 0, 1, weight),  # Red with alpha equal to the attention weight.
+            edgecolor=(0, 0, 1, weight),  # Blue with alpha equal to the attention weight.
             facecolor='none'
         )
         ax.add_patch(rect)
