@@ -54,7 +54,7 @@ def visualize_attention(image_path, coords, attn_weights, patch_size):
 
 def main():
     # Set parameters
-    image_dir = "synthetic_images_random"  # Directory with synthetic images with markers
+    image_dir = "synthetic_images"  # Directory with synthetic images with markers
     label_file = f"{image_dir}/labels.csv"
     patch_size = 224
 
