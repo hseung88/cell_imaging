@@ -37,7 +37,7 @@ def visualize_attention(image_path, coords, attn_weights, patch_size):
         # Draw a rectangle at the patch location.
         rect = mpatches.Rectangle(
             (x, y), patch_size, patch_size,
-            linewidth=3,
+            linewidth=20,
             edgecolor=(0, 0, 1, weight),  # Blue with alpha equal to the attention weight.
             facecolor='none'
         )
@@ -66,7 +66,7 @@ def main():
     # Load the dataset and pick one sample (bag) for visualization.
     dataset = CellImageDataset(image_dir=image_dir, label_file=label_file,
                                patch_size=patch_size, transform=transform)
-    patches, coords, label = dataset[0]  # Load the first image (bag)
+    patches, coords, label = dataset[13]  # Load the first image (bag)
     print(f"Image label: {label.item()}")
 
     # Initialize the MIL model.
