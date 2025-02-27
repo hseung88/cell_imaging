@@ -51,7 +51,7 @@ def generate_synthetic_data_with_random_circles(num_images=10,
                     # Define bounding box for the circle: (left, top, right, bottom)
                     bbox = [center_x - radius, center_y - radius, center_x + radius, center_y + radius]
                     # Draw a bold circle marker with a red outline.
-                    draw.ellipse(bbox, outline="red", width=5)
+                    draw.ellipse(bbox, outline="red", width=20)
 
             filename = f"synthetic_{i}.jpg"
             img.save(os.path.join(output_dir, filename))
