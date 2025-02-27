@@ -17,7 +17,7 @@ class CellImageDataset(Dataset):
         self.image_dir = image_dir
         self.patch_size = patch_size
         self.transform = transform
-        self.image_labels = []  # List of tuples: (filename, label)
+        self.image_labels = []  # (filename, label)
         with open(label_file, 'r') as f:
             for line in f:
                 line = line.strip()
@@ -42,7 +42,7 @@ class CellImageDataset(Dataset):
                     continue
                 patch = image.crop((x, y, x + patch_size, y + patch_size))
                 patches.append(patch)
-                # Normalize coordinates to [0, 1]
+                # normalize coordinates to [0, 1]
                 coords.append([x / width, y / height])
         return patches, coords
 
@@ -52,21 +52,19 @@ class CellImageDataset(Dataset):
         image = Image.open(img_path).convert('RGB')
         patches, coords = self.extract_patches(image)
 
-        # Apply transforms to each patch; if not provided, convert to tensor.
         if self.transform is not None:
             patches = [self.transform(p) for p in patches]
         else:
             patches = [transforms.ToTensor()(p) for p in patches]
 
-        # Stack patches to create a tensor of shape (num_patches, C, H, W)
+        # stack patches to create a tensor of shape (num_patches, C, H, W)
         patches = torch.stack(patches)
-        # Convert coordinates to tensor of shape (num_patches, 2)
+        # convert coordinates to tensor of shape (num_patches, 2)
         coords = torch.tensor(coords, dtype=torch.float)
         label = torch.tensor(label, dtype=torch.float)
         return patches, coords, label
 
 
-# --- Positional Encoding Module ---
 class PositionalEncoding(nn.Module):
     """
     A simple MLP-based positional encoding module.
@@ -83,11 +81,10 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, coords):
         # coords: (num_patches, 2)
-        # Returns: (num_patches, pos_dim)
+        # returns: (num_patches, pos_dim)
         return self.mlp(coords)
 
 
-# --- BasicBlock and ResNetPatchCNN remain unchanged ---
 class BasicBlock(nn.Module):
     expansion = 1
 
@@ -118,7 +115,7 @@ class BasicBlock(nn.Module):
 
 class ResNetPatchCNN(nn.Module):
     """
-    A ResNet-style CNN for patch-level feature extraction.
+    A ResNet for patch-level feature extraction.
     """
 
     def __init__(self, block=BasicBlock, num_blocks=[2, 2, 2], num_classes=128):
@@ -164,7 +161,6 @@ class ResNetPatchCNN(nn.Module):
         return x
 
 
-# --- AttentionMIL Module ---
 class AttentionMIL(nn.Module):
     """
     Attention module for MIL aggregation.
@@ -182,23 +178,16 @@ class AttentionMIL(nn.Module):
     def forward(self, h):
         # h: (num_instances, feature_dim)
         a = self.attention_fc(h)  # (num_instances, 1)
-        a = torch.softmax(a, dim=0)  # Softmax over instances
-        M = torch.sum(a * h, dim=0)  # Aggregated feature: (feature_dim,)
+        a = torch.softmax(a, dim=0)
+        M = torch.sum(a * h, dim=0)  # (feature_dim,)
         return M, a
 
 
-# --- MIL Model with Advanced Positional Encoding ---
 class MILModel(nn.Module):
     """
-    MIL model that extracts patch-level features using a ResNet-based CNN,
+    MIL model that extracts patch-level features using a ResNet,
     integrates spatial information via a learned positional encoding,
     aggregates patch features with an attention module, and performs image-level classification.
-
-    Parameters:
-      - patch_feature_dim: Dimension of patch features from ResNetPatchCNN.
-      - include_coords: Boolean flag to include spatial information.
-      - pos_dim: Dimension of the positional encoding.
-      - bag_batch_size: Mini-batch size for processing patches within a bag.
     """
 
     def __init__(self, patch_feature_dim=128, include_coords=True, pos_dim=32, bag_batch_size=128):
@@ -224,7 +213,7 @@ class MILModel(nn.Module):
     def forward(self, patches, coords):
         num_patches = patches.size(0)
         patch_features = []
-        # Process patches in mini-batches to manage memory.
+        # process patches in mini-batches to manage memory
         for i in range(0, num_patches, self.bag_batch_size):
             batch_patches = patches[i:i + self.bag_batch_size]
             features_batch = self.patch_cnn(batch_patches)
@@ -232,13 +221,13 @@ class MILModel(nn.Module):
         patch_features = torch.cat(patch_features, dim=0)  # (num_patches, patch_feature_dim)
 
         if self.include_coords:
-            # Use the advanced positional encoder instead of raw coordinates.
+            # use the advanced positional encoder
             pos_encoding = self.positional_encoder(coords)  # (num_patches, pos_dim)
             x = torch.cat([patch_features, pos_encoding], dim=1)
         else:
             x = patch_features
 
-        # Aggregate patch features using the attention module.
+        # aggregate patch features using the attention module
         M, attn_weights = self.attention(x)
         M = M.unsqueeze(0)  # Add batch dimension: (1, agg_input_dim)
         y_pred = self.classifier(M)
