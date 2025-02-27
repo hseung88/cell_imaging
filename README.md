@@ -24,8 +24,20 @@ This project implements a multiple-instance learning (MIL) pipeline for high-res
 - **Loss Function:** The model is trained end-to-end using binary cross-entropy loss with only image-level supervision.
 - **Optimizer:** We used AdamW with lr=1e-3, betas=(0.9, 0.999), and weight_decay=0.05
 - **Attention Visualization:** After training, attention weights are extracted and overlaid on the original image. A custom visualization function draws bold **blue boxes** over each patch, with opacity scaled by the corresponding attention weight. This helps verify whether the model focuses on regions containing markers.
+### Example
+  - True Label==1, Model predicted label==1
+  - Generated Image vs Attention Weights Visualization
 
-<img src="synthetic_8.jpg" alt="Original Image with Marker" width="300"/> <img src="attention_overlay.png" alt="Attention Overlay" width="300"/>
+  <img src="synthetic_8.jpg" alt="Original Image with Marker" width="250"/> <img src="attention_overlay.png" alt="Attention Overlay" width="255"/>
+
+## Conclusion
+We evaluated whether incorporating positional encoding into patch-level features, coupled with an attention-based aggregation mechanism, enables the model to detect disease-causing markers and accurately classify image-level labels. 
+
+## References
+[1] Ilse, M., Tomczak, J. M., & Welling, M. (2018). *Attention-based Deep Multiple Instance Learning*. International Conference on Machine Learning. 2018.
+
+[2] Campanella, G., Hanna, M. G., Geneslaw, L., Miraflor, A., Silva, V. W. K., Busam, K. J., ... & Fuchs, T. J. (2019). *Clinical-grade Computational Pathology Using Weakly Supervised Deep Learning on Whole Slide Images*. Nature Medicine. 2019.
+
 
 ## Getting Started
 ### Generate Synthetic Data
