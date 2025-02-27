@@ -190,10 +190,10 @@ class MILModel(nn.Module):
     aggregates patch features with an attention module, and performs image-level classification.
     """
 
-    def __init__(self, patch_feature_dim=128, include_coords=True, pos_dim=32, bag_batch_size=128):
+    def __init__(self, patch_feature_dim=128, include_coords=True, pos_dim=32, image_batch_size=128):
         super(MILModel, self).__init__()
         self.include_coords = include_coords
-        self.bag_batch_size = bag_batch_size
+        self.image_batch_size = image_batch_size
         self.patch_cnn = ResNetPatchCNN(num_classes=patch_feature_dim)
 
         if include_coords:
@@ -214,8 +214,8 @@ class MILModel(nn.Module):
         num_patches = patches.size(0)
         patch_features = []
         # process patches in mini-batches to manage memory
-        for i in range(0, num_patches, self.bag_batch_size):
-            batch_patches = patches[i:i + self.bag_batch_size]
+        for i in range(0, num_patches, self.image_batch_size):
+            batch_patches = patches[i:i + self.image_batch_size]
             features_batch = self.patch_cnn(batch_patches)
             patch_features.append(features_batch)
         patch_features = torch.cat(patch_features, dim=0)  # (num_patches, patch_feature_dim)

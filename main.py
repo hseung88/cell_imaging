@@ -86,7 +86,7 @@ def main():
     # Each sample is an image with many patches; use batch_size=1
     dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
-    model = MILModel(patch_feature_dim=128, include_coords=True, bag_batch_size=args.bag_batch_size)
+    model = MILModel(patch_feature_dim=128, include_coords=True, image_batch_size=args.image_batch_size)
 
     # train the model
     train_model(model, dataloader, num_epochs=args.num_epochs, lr=args.lr,
